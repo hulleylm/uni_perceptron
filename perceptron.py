@@ -1,5 +1,12 @@
 import numpy as np
 
+def readInData(fileName):
+    f = open("data/" + fileName + ".data", "r")
+    features = getArrayFromFile(f)
+    classesSplit = np.split(features, 3)
+
+    return classesSplit
+
 def getArrayFromFile(file):
 
     fileLines = file.readlines()
@@ -11,6 +18,12 @@ def getArrayFromFile(file):
         featuresArray[i] = instance
 
     return featuresArray
+
+def getClassLabels(label):
+    classArray = np.empty([40,1])
+    classArray.fill(label)
+
+    return classArray
 
 def trainModel(train, maxIter):
 
@@ -27,32 +40,35 @@ def trainModel(train, maxIter):
             print(str(j) + " predicted: " + str(predictedClass) + " actual: " + str(actualClass))
 
             if ((predictedClass*actualClass) <= 0.0):
-                print(str(j) + " classified wrong")
+                print("wrong")
+                for k,weight in enumerate(weights):
+                    weights[k] = weight + actualClass*features[k]
+                    bias = bias + actualClass
+            else:
+                print("right")
+
+    return bias, weights
 
 # -------------- Read in data -------------
 
-trainFile = open("data/train.data", "r")
-trainFeatures = getArrayFromFile(trainFile)
-trainClasses = np.split(trainFeatures, 3)
+trainClasses = readInData("train")
+testClasses = readInData("test")
 
-testFile = open("data/test.data", "r")
-testFeatures = getArrayFromFile(testFile)
-testClasses = np.split(testFeatures, 3)
-
-maxIter = 1
-
-negTrainClass = np.empty([40,1])
-negTrainClass.fill(-1)
-
-posTrainClass = np.empty([40,1])
-posTrainClass.fill(1)
+maxIter = 3
 
 # ----Class 1 and 2 ---------
 
-train1 = np.hstack((trainClasses[0], negTrainClass))
-train2 = np.hstack((trainClasses[1], posTrainClass))
+train1 = np.hstack((trainClasses[0], getClassLabels(-1)))
+train2 = np.hstack((trainClasses[1], getClassLabels(1)))
+
+train12 = np.concatenate((train1, train2), axis=0)
+bias, weights = trainModel(train12, maxIter)
+testModel(bias, weights)
+
+# ----Class 2 and 3 ---------
+
+train2 = np.hstack((trainClasses[1], negTrainClass))
+train3 = np.hstack((trainClasses[2], posTrainClass))
 
 train12 = np.concatenate((train1, train2), axis=0)
 trainModel(train12, maxIter)
-
-# ----Class 2 and 3 ---------
