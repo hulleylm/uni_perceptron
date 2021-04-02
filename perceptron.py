@@ -45,7 +45,7 @@ def formatData(neg, pos):
 
     return combined
 
-def trainModel(train, maxIter):
+def trainModel(train, maxIter, l2Regression = False, regCoefficient = 0):
 
     bias = 0
     weights = np.zeros(4)
@@ -62,10 +62,13 @@ def trainModel(train, maxIter):
 
             activationScore = np.dot(weights, features) + bias
 
-            if ((activationScore*actualClass) <= 0.0):
+            if ((activationScore * actualClass) <= 0.0):
                 wrong = wrong + 1
                 for k,weight in enumerate(weights):
-                    weights[k] = weight + actualClass*features[k] #Update the weights according to the rule
+                    if l2Regression:
+                        weights[k] = ((1 - 2 * regCoefficient) * weight + actualClass * features[k])
+                    else:
+                        weights[k] = weight + actualClass * features[k]
                 bias = bias + actualClass
     
     accuracy = 100 - (wrong/len(train)*100)
@@ -89,7 +92,7 @@ def testBinaryModel(test, bias, weights):
             wrong = wrong + 1
     
     accuracy = 100 - (wrong/len(test)*100)
-    print("Test accuracy: " + str(round(accuracy, 2)) + "%")
+    print("Test accuracy: " + str(round(accuracy, 2)) + "%\n")
 
 def testMultiModel(bias, weightsArr, testClasses):
     
@@ -107,7 +110,7 @@ def testMultiModel(bias, weightsArr, testClasses):
             right = right + 1
     
     accuracy = right/len(test)*100
-    print("\nMulti-class test accuracy: " + str(round(accuracy, 2)) + "%")
+    print("Multi-class test accuracy: " + str(round(accuracy, 2)) + "%")
 
 # ---- Read in Data -----
 
@@ -130,7 +133,7 @@ testBinaryModel(test, bias, weights)
 
 # ---- Question 3: Class 2 & 3 -----
 
-print("\nClass 2 and 3")
+print("Class 2 and 3")
 
 train = formatData(trainClasses[1], trainClasses[2])
 test = formatData(testClasses[1], testClasses[2])
@@ -140,7 +143,7 @@ testBinaryModel(test, bias, weights)
 
 # ---- Question 3: Class 1 & 3 -----
 
-print("\nClass 1 and 3")
+print("Class 1 and 3")
 
 train = formatData(trainClasses[0], trainClasses[2])
 test = formatData(testClasses[0], testClasses[2])
@@ -150,7 +153,7 @@ testBinaryModel(test, bias, weights)
 
 # ---- Question 4: multi-class classification -----
 
-print("\nQuestion 4\n")
+print("Question 4\n")
 
 #Train the individual models
 bias = np.zeros((3))
@@ -171,7 +174,27 @@ classes12 = np.concatenate((trainClasses[0], trainClasses[1]), axis=0)
 train3 = formatData(classes12, trainClasses[2])
 bias[2], weightsArr[2] = trainModel(train3, maxIter)
 
+print("\n")
 testMultiModel(bias, weightsArr, testClasses)
 
 # ---- Question 5: l2 regression -----
 
+print("\nQuestion 5")
+
+regCoefficients = [0.01, 0.1, 1.0, 10.0, 100.0]
+
+for coefficient in regCoefficients:
+    bias = np.zeros((3))
+    weightsArr = np.zeros((3,4))
+
+    print("\nModel for class 1, with l2 regularisation coefficient " + str(coefficient))
+    bias[0], weightsArr[0] = trainModel(train1, maxIter, True, coefficient)
+
+    print("\nModel for class 2, with l2 regularisation coefficient " + str(coefficient))
+    bias[1], weightsArr[1] = trainModel(train2, maxIter, True, coefficient)
+
+    print("\nModel for class 3, with l2 regularisation coefficient " + str(coefficient))
+    bias[2], weightsArr[2] = trainModel(train3, maxIter, True, coefficient)
+
+    print("\n1-vs-rest multi-class model with regularisation coefficient " + str(coefficient))
+    testMultiModel(bias, weightsArr, testClasses)
