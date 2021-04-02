@@ -10,65 +10,120 @@ def readInData(fileName):
 def getArrayFromFile(file):
 
     fileLines = file.readlines()
-    featuresArray = np.zeros((len(fileLines),4))
+    numInstances = len(fileLines)
+    featuresArray = np.zeros((numInstances,4))
 
     for i,line in enumerate(fileLines):
         line = line[:-9]
         instance = line.split(",")
         featuresArray[i] = instance
 
+    # featuresArray = normalise(featuresArray)
+
     return featuresArray
 
-def getClassLabels(label):
-    classArray = np.empty([40,1])
-    classArray.fill(label)
+def createColumn(size, label):
+    column = np.empty([size,1])
+    column.fill(label)
 
-    return classArray
+    return column
+
+def normalise(arr):
+    maxFeatures = np.amax(arr, axis = 0)
+    minFeatures = np.amin(arr, axis = 0)
+
+    for i in range(len(arr)):
+        for j in range(len(maxFeatures)):
+            feature = arr[i][j]
+            arr[i][j] = (feature - minFeatures[j])/(maxFeatures[j] - minFeatures[j])
+    return arr
+
+def formatData(first, second, classType):
+    negClass = np.hstack((classType[first-1], createColumn(len(classType[first-1]),-1)))
+    posClass = np.hstack((classType[second-1], createColumn(len(classType[second-1]),1)))
+    combined = np.concatenate((negClass, posClass), axis=0)
+
+    return combined
 
 def trainModel(train, maxIter):
 
-    weights = np.zeros(4)
     bias = 0
-
+    weights = np.zeros(4)
+    
     for i in range(maxIter):
+
+        np.random.shuffle(train)
+        wrong = 0
+
         for j,obj in enumerate(train):
 
             features = obj[:-1]
             actualClass = obj[4]
 
-            predictedClass = np.dot(weights, features) + bias
-            print(str(j) + " predicted: " + str(predictedClass) + " actual: " + str(actualClass))
+            activationScore = np.dot(weights, features) + bias
 
-            if ((predictedClass*actualClass) <= 0.0):
-                print("wrong")
+            if ((activationScore*actualClass) <= 0.0):
+                wrong = wrong + 1
                 for k,weight in enumerate(weights):
-                    weights[k] = weight + actualClass*features[k]
-                    bias = bias + actualClass
-            else:
-                print("right")
+                    weights[k] = weight + actualClass*features[k] #Update the weights according to the rule
+                bias = bias + actualClass
+    
+    accuracy = 100 - (wrong/len(train)*100)
+    print("Train accuracy: " + str(accuracy) + "%")
 
     return bias, weights
 
-# -------------- Read in data -------------
+def testModel(test, bias, weights):
+
+    np.random.shuffle(test)
+    wrong = 0
+
+    for j,obj in enumerate(test):
+
+        features = obj[:-1]
+        actualClass = obj[4]
+
+        activationScore = np.dot(weights, features) + bias
+
+        if ((activationScore*actualClass) <= 0.0):
+            wrong = wrong + 1
+    
+    accuracy = 100 - (wrong/len(test)*100)
+    print("Test accuracy: " + str(accuracy) + "%")
+
+# ---- Read in Data -----
 
 trainClasses = readInData("train")
 testClasses = readInData("test")
 
-maxIter = 3
+maxIter = 20
 
-# ----Class 1 and 2 ---------
+# ---- Question 3: Class 1 & 2 -----
 
-train1 = np.hstack((trainClasses[0], getClassLabels(-1)))
-train2 = np.hstack((trainClasses[1], getClassLabels(1)))
+print("\nClass 1 and 2")
 
-train12 = np.concatenate((train1, train2), axis=0)
-bias, weights = trainModel(train12, maxIter)
-testModel(bias, weights)
+train = formatData(1, 2, trainClasses)
+test = formatData(1, 2, testClasses)
 
-# ----Class 2 and 3 ---------
+bias, weights = trainModel(train, maxIter)
+testModel(test, bias, weights)
 
-train2 = np.hstack((trainClasses[1], negTrainClass))
-train3 = np.hstack((trainClasses[2], posTrainClass))
+# ---- Question 3: Class 2 & 3 -----
 
-train12 = np.concatenate((train1, train2), axis=0)
-trainModel(train12, maxIter)
+print("\nClass 2 and 3")
+
+train = formatData(2, 3, trainClasses)
+test = formatData(2, 3, testClasses)
+
+bias, weights = trainModel(train, maxIter)
+testModel(test, bias, weights)
+
+# ---- Question 3: Class 1 & 3 -----
+
+print("\nClass 1 and 3")
+
+train = formatData(1, 3, trainClasses)
+test = formatData(1, 3, testClasses)
+
+bias, weights = trainModel(train, maxIter)
+testModel(test, bias, weights)
